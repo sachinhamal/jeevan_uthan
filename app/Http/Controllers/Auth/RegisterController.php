@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\BaseDir\Entities\User;
 use App\BaseDir\Services\UserService;
 use App\Http\Controllers\Controller;
+use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
@@ -71,13 +72,55 @@ class RegisterController extends Controller
      */
     protected function create(array $data)
     {
-        return User::create([
+        $user = User::create([
             'name' => $data['name'],
             'email' => $data['email'],
             'password' => Hash::make($data['password']),
             'user_type' => 'member',
             'token' => str_random(32),
         ]);
+        $user_array = $user->toArray();
+        Mail::send('mails.confirmation', $user_array, function ($message) use ($user_array) {
+            $message->to($user_array['email'], $user_array['name']);
+            $message->subject('Confirm your email');
+        });
+        if ($user == true)
+        {
+            return redirect()->route('login')->with('success','You are successfully registerd. Please verify your account through email we send');
+        }
+        else
+            return back()->with('error','You are not registered. Please try again.');
+    }
+
+    public function register(Request $request)
+    {
+        $this->validator($request->all())->validate();
+
+        event(new Registered($user = $this->create($request->all())));
+
+        return $user;
+    }
+
+    public function confirmation($token)
+    {
+        $user = User::where('token', decrypt($token))->first();
+        if (!is_null($user)) {
+                if ($user->verified != 1) {
+                    $user->verified = 1;
+                    $user->token = null;
+                    $user->save();
+                    $user = $user->toArray();
+
+                    Mail::send('mails.confirmed', $user, function ($message) use ($user) {
+                        $message->to($user['email'], $user['first_name']);
+                        $message->subject('Account Confirmation');
+                    });
+                    return redirect('/')->with('success', "Your registration is complete. Please login.");
+                } elseif ($user->verified == 1)
+                    return redirect('/')->with('success', "You are already registered. Please login.");
+        }else {
+            return redirect('/')->with('success', "Either you are already registered or the token is invalid.");
+        }
     }
 
     /**

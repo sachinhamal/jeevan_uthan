@@ -5,4 +5,4 @@
        @yield('contents')
     </div>
 </div>
-@include('admin.layout.footer') 
+@include('admin.layout.footer')
