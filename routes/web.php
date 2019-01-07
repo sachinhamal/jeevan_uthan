@@ -15,5 +15,13 @@ Route::get('/', function () {
     return view('welcome');
 });
 
+<<<<<<< HEAD
 // Route::group();
 Route::get('admin/dashboard','AdminDashboardController@index')->name('admin.dashboard');
+=======
+
+Route::get('admin/dashboard','AdminDashboardController@index')->name('admin.dashboard');
+Auth::routes();
+
+Route::get('/home', 'HomeController@index')->name('home');
+>>>>>>> 804f1c678dd13b948fe1af580b77749120e8b848
