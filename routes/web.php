@@ -15,5 +15,5 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-
+// Route::group();
 Route::get('admin/dashboard','AdminDashboardController@index')->name('admin.dashboard');
