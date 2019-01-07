@@ -2,9 +2,12 @@
 
 namespace App\Http\Controllers\Auth;
 
-use App\User;
+use App\BaseDir\Entities\User;
+use App\BaseDir\Services\UserService;
 use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Foundation\Auth\RegistersUsers;
 
@@ -29,15 +32,20 @@ class RegisterController extends Controller
      * @var string
      */
     protected $redirectTo = '/home';
+    /**
+     * @var UserService
+     */
+    private $userService;
 
     /**
      * Create a new controller instance.
      *
      * @return void
      */
-    public function __construct()
+    public function __construct(UserService $userService)
     {
         $this->middleware('guest');
+        $this->userService = $userService;
     }
 
     /**
@@ -59,7 +67,7 @@ class RegisterController extends Controller
      * Create a new user instance after a valid registration.
      *
      * @param  array  $data
-     * @return \App\User
+     * @return
      */
     protected function create(array $data)
     {
@@ -67,6 +75,88 @@ class RegisterController extends Controller
             'name' => $data['name'],
             'email' => $data['email'],
             'password' => Hash::make($data['password']),
+            'user_type' => 'member',
+            'token' => str_random(32),
         ]);
+    }
+
+    /**
+     * send email to reset password
+     * @param Request $request
+     * @return string
+     */
+    public function passwordEmail(Request $request)
+    {
+        $email = $request->email;
+        $user = $this->userService->getUser('email',$email);
+        if ($user == null) {
+            return back()->with('warning',"Account not found.");
+        } else {
+            $user->token = str_random(32);
+            $user->update();
+            $user = $user->toArray();
+            if ($user['verified'] != 0)
+            {
+                Mail::send('mails.password_reset', $user, function ($message) use ($user) {
+                    $message->to($user['email'], $user['name']);
+                    $message->subject('Reset Your Password');
+                });
+                return redirect('/')->with('success',"Password reset link send to email address");
+            }
+            else
+                return back()->with('warning',"Account is not verified. Please verify account.");
+        }
+    }
+
+    /**
+     * view after the link in the email for password reset
+     * @param $token
+     * @return \Illuminate\Contracts\View\Factory|\Illuminate\Http\RedirectResponse|\Illuminate\View\View
+     */
+    public function resetpassword($token)
+    {
+        $user = $this->userService->getUser('token',decrypt($token));
+        if (!is_null($user)) {
+            return view('auth.reset_password', compact('token'));
+        }
+        return redirect('/')->with('error', 'The password reset link has already been used.');
+    }
+
+    public function resetPasswordChange(Request $request)
+    {
+        $user = User::where('token', decrypt($request->token))->first();
+        if ($user == null)
+        {
+            return redirect('/')->with('warning', 'The link has already been used.');
+        }else {
+            $reset = $this->userService->passwordReset($request, $user->id);
+            if ($reset == true)
+                return redirect('/')->with('success', 'Password changed successfully. Please login');
+            else
+                return back()->with('error', "Password couldnot be changed. Please try again.");
+        }
+
+    }
+
+
+    /**
+     * change the password from inside web after login
+     * @param Request $request
+     * @param $id
+     * @return array
+     */
+    public function changePassword(Request $request, $id)
+    {
+        if ($user = $this->userService->changePassword($request, $id)) {
+            $response = [
+                "code" => 200,
+                "message" => "Password changed successfully."
+            ];
+        }else
+            $response = [
+                "code" => 500,
+                "message" => "Password changing couldn\'t be completed"
+            ];
+        return $response;
     }
 }
