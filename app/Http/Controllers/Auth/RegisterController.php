@@ -49,6 +49,11 @@ class RegisterController extends Controller
         $this->userService = $userService;
     }
 
+
+    public function memberRegister()
+    {
+        return view('auth.register');
+    }
     /**
      * Get a validator for an incoming registration request.
      *
@@ -72,24 +77,31 @@ class RegisterController extends Controller
      */
     protected function create(array $data)
     {
-        $user = User::create([
-            'name' => $data['name'],
-            'email' => $data['email'],
-            'password' => Hash::make($data['password']),
-            'user_type' => 'member',
-            'token' => str_random(32),
-        ]);
-        $user_array = $user->toArray();
-        Mail::send('mails.confirmation', $user_array, function ($message) use ($user_array) {
-            $message->to($user_array['email'], $user_array['name']);
-            $message->subject('Confirm your email');
-        });
-        if ($user == true)
-        {
-            return redirect()->route('login')->with('success','You are successfully registerd. Please verify your account through email we send');
+        if($data['part']=='me') {
+            $role = 'member';
         }
-        else
-            return back()->with('error','You are not registered. Please try again.');
+        else if($data['part']=='vol') {
+            $role = 'volunteer';
+        }
+        if ($role != null) {
+            $user = User::create([
+                'name' => $data['name'],
+                'email' => $data['email'],
+                'password' => Hash::make($data['password']),
+                'user_type' => $role,
+                'token' => str_random(32),
+            ]);
+            $user_array = $user->toArray();
+            Mail::send('mails.confirmation', $user_array, function ($message) use ($user_array) {
+                $message->to($user_array['email'], $user_array['name']);
+                $message->subject('Confirm your email');
+            });
+            if ($user == true) {
+                return redirect()->route('login')->with('success', 'You are successfully registerd. Please verify your account through email we send');
+            } else
+                return back()->with('error', 'You are not registered. Please try again.');
+        }
+        return back()->with('error', 'Something went wrong. Please try again.');
     }
 
     public function register(Request $request)
@@ -112,7 +124,7 @@ class RegisterController extends Controller
                     $user = $user->toArray();
 
                     Mail::send('mails.confirmed', $user, function ($message) use ($user) {
-                        $message->to($user['email'], $user['first_name']);
+                        $message->to($user['email'], $user['name']);
                         $message->subject('Account Confirmation');
                     });
                     return redirect('/')->with('success', "Your registration is complete. Please login.");
@@ -123,6 +135,30 @@ class RegisterController extends Controller
         }
     }
 
+
+    public function memberConfirmation($token)
+    {
+        $user = User::where('token', decrypt($token))->first();
+        if (!is_null($user)) {
+            if ($user->verified != 1) {
+                $user->verified = 1;
+                $user->token = null;
+                $user->save();
+                $user = $user->toArray();
+
+                Mail::send('mails.confirmed', $user, function ($message) use ($user) {
+                    $message->to($user['email'], $user['name']);
+                    $message->subject('Account Confirmed');
+                });
+// @todo add the user to member table and define what further role he has
+
+                return redirect('/')->with('success', "Your registration is complete. Please login.");
+            } elseif ($user->verified == 1)
+                return redirect('/')->with('success', "You are already registered. Please login.");
+        }else {
+            return redirect('/')->with('success', "Either you are already registered or the token is invalid.");
+        }
+    }
     /**
      * send email to reset password
      * @param Request $request

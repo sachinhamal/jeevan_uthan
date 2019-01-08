@@ -20,9 +20,11 @@ Route::get('admin/dashboard','AdminDashboardController@index')->name('admin.dash
 Auth::routes();
 
 Route::get('/home', 'HomeController@index')->name('home');
+Route::get('/member-register', 'Auth\RegisterController@memberRegister')->name('member.register');
 
 
 Route::get('/users/confirmation/{token}', 'Auth\RegisterController@confirmation')->name('confirmation');
+Route::get('/member/confirmation/{token}', 'Auth\RegisterController@memberConfirmation')->name('member.confirmation');
 
 //reset password
 Route::post('/password/email', 'Auth\RegisterController@passwordEmail')->name('password.email');
@@ -30,3 +32,4 @@ Route::get('/reset/password/{token}', 'Auth\RegisterController@resetPassword')->
 Route::post('/reset_password', 'Auth\RegisterController@resetPasswordChange')->name('resetpassword.change');
 //change password
 Route::post('/user/{id}/password', 'Auth\RegisterController@changePassword')->name('change.password');
+Route::view('/create','admin.children.create');
