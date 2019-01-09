@@ -25,8 +25,7 @@ class UserService
 
     public function passwordReset($request, $id)
     {
-        return $this->userRepository->passwordResetRepo($request, $id);
-
+       return $this->userRepository->passwordResetRepo($request, $id);
     }
 
     public function getUser($param,$value)

@@ -15,8 +15,11 @@ Route::get('/', function () {
     return view('welcome');
 });
 
+Route::group(['prefix' => 'admin', 'middleware' => ['auth']], function () {
+  Route::get('admin/dashboard','AdminDashboardController@index')->name('admin.dashboard');
+	
+});
 
-Route::get('admin/dashboard','AdminDashboardController@index')->name('admin.dashboard');
 Auth::routes();
 
 Route::get('/home', 'HomeController@index')->name('home');
@@ -30,3 +33,10 @@ Route::get('/reset/password/{token}', 'Auth\RegisterController@resetPassword')->
 Route::post('/reset_password', 'Auth\RegisterController@resetPasswordChange')->name('resetpassword.change');
 //change password
 Route::post('/user/{id}/password', 'Auth\RegisterController@changePassword')->name('change.password');
+
+Route::group(['prefix' => 'user', 'middleware' => ['auth']], function () {
+  Route::get('dashboard','UserController@index')->name('user.dashboard');
+  Route::get('profile','UserController@view_profile')->name('user.profile');
+  Route::post('profile/edit','UserController@update')->name('user.edit');
+	
+});

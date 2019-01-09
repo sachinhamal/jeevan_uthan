@@ -46,7 +46,7 @@ class LoginController extends Controller
             return redirect('/')->with('error', 'You have not been verified. please verify through email we sent to your account');
         }
         else
-            return redirect('/')->with('success', 'You  have been successfully logged in');
+            return redirect('/user/dashboard')->with('success', 'You  have been successfully logged in');
 
     }
 }
